@@ -175,6 +175,16 @@ class Relation(object):
 
     def mapping(self, keyFunc):
         ''' returns mapping of key to value
+
+        Test mapping according a custom key
+        >>> f = lambda o: o['a'] * 3
+        >>> Relation([{'a': 1}, {'a': 2}, {'a': 3}]).mapping(f)
+        {9: {'a': 3}, 3: {'a': 1}, 6: {'a': 2}}
+
+        Test duplicit key
+        >>> Relation([{'a': 1}, {'a': 2}, {'a': 2}]).mapping(f)
+        Traceback (most recent call last):
+        RuntimeError: mapping key is not unique
         '''
         mapping = {}
         for v in self._iter:
@@ -182,8 +192,13 @@ class Relation(object):
             if k in mapping:
                 raise RuntimeError('mapping key is not unique')
             mapping[k] = v
+        return mapping
 
     def mappingByNames(self, *names):
+        ''' mapping version with key equal to names
+        >>> Relation([{'a': 1}, {'a': 2}, {'a': 3}]).mappingByNames('a')
+        {1: {'a': 1}, 2: {'a': 2}, 3: {'a': 3}}
+        '''
         return self.mapping(keyFunc=operator.itemgetter(*names))
 
     def takeWhile(self, func):
