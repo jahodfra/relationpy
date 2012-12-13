@@ -116,14 +116,24 @@ class Relation(object):
 
     @staticmethod
     def _checkNonDecreasing(it, keyFunc):
+        ascending = False
+        descending = False
+
+        it = iter(it)
         prev = it.next()
         yield prev
         prevValue = keyFunc(prev)
         while True:
             current = it.next()
             currentValue = keyFunc(current)
-            if currentValue < prevValue:
-                raise RuntimeError('the relation is not sorted')
+            if prevValue > currentValue:
+                if ascending:
+                    raise RuntimeError('the relation is not sorted')
+                descending = True
+            elif prevValue < currentValue:
+                if descending:
+                    raise RuntimeError('the relation is not sorted')
+                ascending = True
             yield current
             prevValue = currentValue
 
@@ -135,12 +145,33 @@ class Relation(object):
         else:
             it = list(self._iter)
             it.sort(key=keyFunc)
-        return self.__class__((k, self.__class__(g)) for k, g in itertools.groupby(it, keyFunc))
+        return self.__class__((k, list(g)) for k, g in itertools.groupby(it, keyFunc))
 
-    def groupByNames(self, isSorted=False, *names):
+    def groupByNames(self, *names, **kwargs):
         ''' sorts and groups items
+
+        Check that unsorted relation will throw an error
+        >>> x = Relation([{'a': 2}, {'a': 1}, {'a': 2}]).groupByNames('a', isSorted=True)
+        >>> list(x)
+        Traceback (most recent call last):
+        RuntimeError: the relation is not sorted
+
+        Check that sorted relation, can be returned without any problem (ascending)
+        >>> x = Relation([{'a': 1}, {'a': 1}, {'a': 2}]).groupByNames('a', isSorted=True)
+        >>> list(x)
+        [(1, [{'a': 1}, {'a': 1}]), (2, [{'a': 2}])]
+
+        Check that sorted relation, can be returned without any problem (descending)
+        >>> x = Relation([{'a': 2}, {'a': 1}, {'a': 1}]).groupByNames('a', isSorted=True)
+        >>> list(x)
+        [(2, [{'a': 2}]), (1, [{'a': 1}, {'a': 1}])]
+
+        Check the grouping with sorting
+        >>> x = Relation([{'a': 2}, {'a': 1}, {'a': 2}]).groupByNames('a')
+        >>> list(x)
+        [(1, [{'a': 1}]), (2, [{'a': 2}, {'a': 2}])]
         '''
-        return self.groupBy(keyFunc=operator.itemgetter(*names), isSorted=isSorted)
+        return self.groupBy(keyFunc=operator.itemgetter(*names), isSorted=kwargs.get('isSorted', False))
 
     def mapping(self, keyFunc):
         ''' returns mapping of key to value
