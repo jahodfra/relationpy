@@ -28,11 +28,10 @@ class Relation(object):
     def extend(self, **newParams):
         ''' computes additional parameters to the object
 
-        >>> x = Relation([{'a': 1, 'b': 2}]).extend(
+        >>> Relation([{'a': 1, 'b': 2}]).extend(
         ...     c=lambda a: a + 1,
         ...     d=lambda a, b: a + b,
-        ...     e=lambda: 25)
-        >>> list(x)
+        ...     e=lambda: 25).list()
         [{'a': 1, 'c': 2, 'b': 2, 'e': 25, 'd': 3}]
         '''
         def createComputeParam(func):
@@ -56,8 +55,7 @@ class Relation(object):
     def project(self, *names):
         ''' return subset of attributes
 
-        >>> x = Relation([{'a': 1, 'b': 2, 'c': 3}]).project('a', 'b')
-        >>> list(x)
+        >>> Relation([{'a': 1, 'b': 2, 'c': 3}]).project('a', 'b').list()
         [{'a': 1, 'b': 2}]
         '''
         return self.map(lambda o: dict((k, o.get(k)) for k in names))
@@ -81,12 +79,11 @@ class Relation(object):
     def rename(self, **kwargs):
         ''' rename some attributes according kwargs mapping
 
-        >>> x = Relation([{'a': 1, 'b': 2}]).rename(c='a')
-        >>> list(x)
+        >>> Relation([{'a': 1, 'b': 2}]).rename(c='a').list()
         [{'c': 1, 'b': 2}]
         '''
         revertedDict = dict((v, k) for k, v in kwargs.items())
-        func = lambda o: dict((revertedDict.get(k, k), o[k]) for k in o)
+        func = lambda o: dict((revertedDict.get(k, k), v) for k, v in o.items())
         return self.map(func)
 
     def fix(self):
@@ -94,12 +91,15 @@ class Relation(object):
 
         >>> it = iter([{'a': 1, 'b': 2}])
         >>> rel = Relation(it).fix()
-        >>> list(rel)
+        >>> rel.list()
         [{'a': 1, 'b': 2}]
-        >>> list(rel)
+        >>> rel.list()
         [{'a': 1, 'b': 2}]
         '''
         return self.__class__(list(self._iter))
+
+    def list(self):
+        return list(self._iter)
 
     def copy(self):
         return self.map(dict)
@@ -169,24 +169,23 @@ class Relation(object):
         ''' sorts and groups items
 
         Check that unsorted relation will throw an error
-        >>> x = Relation([{'a': 2}, {'a': 1}, {'a': 2}]).groupByNames('a', isSorted=True)
-        >>> list(x)
+        >>> Relation([{'a': 2}, {'a': 1}, {'a': 2}]).groupByNames('a',
+        ...     isSorted=True).list()
         Traceback (most recent call last):
         RuntimeError: the relation is not sorted
 
         Check that sorted relation, can be returned without any problem (ascending)
-        >>> x = Relation([{'a': 1}, {'a': 1}, {'a': 2}]).groupByNames('a', isSorted=True)
-        >>> list(x)
+        >>> Relation([{'a': 1}, {'a': 1}, {'a': 2}]).groupByNames('a',
+        ...     isSorted=True).list()
         [(1, [{'a': 1}, {'a': 1}]), (2, [{'a': 2}])]
 
         Check that sorted relation, can be returned without any problem (descending)
-        >>> x = Relation([{'a': 2}, {'a': 1}, {'a': 1}]).groupByNames('a', isSorted=True)
-        >>> list(x)
+        >>> Relation([{'a': 2}, {'a': 1}, {'a': 1}]).groupByNames('a',
+        ...     isSorted=True).list()
         [(2, [{'a': 2}]), (1, [{'a': 1}, {'a': 1}])]
 
         Check the grouping with sorting
-        >>> x = Relation([{'a': 2}, {'a': 1}, {'a': 2}]).groupByNames('a')
-        >>> list(x)
+        >>> Relation([{'a': 2}, {'a': 1}, {'a': 2}]).groupByNames('a').list()
         [(1, [{'a': 1}]), (2, [{'a': 2}, {'a': 2}])]
         '''
         return self.groupBy(keyFunc=operator.itemgetter(*names), isSorted=kwargs.get('isSorted', False))
