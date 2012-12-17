@@ -1,3 +1,4 @@
+import sys
 import itertools
 import collections
 import operator
@@ -276,4 +277,55 @@ class Relation(object):
         '''
         return self.countBy(keyFunc=operator.itemgetter(*names))
 
-identity = lambda x: x
+    def printTable(self, keys=None, maxWidth=120, separator='    '):
+        '''function to printout results in table like format
+        '''
+        items = list(self._iter)
+
+        if isinstance(keys, basestring):
+            keys = keys.split()
+        elif not keys:
+            keys = set()
+            for obj in items:
+                keys.update(obj.keys())
+            keys = list(keys)
+            keys.sort()
+        rows = []
+        for obj in items:
+            rows.append(tuple(obj.get(k) for k in keys))
+        TablePrinter(maxWidth=maxWidth, separator=separator).write(keys, rows)
+
+
+class TablePrinter:
+    def __init__(self, maxWidth, separator):
+        self.maxWidth = maxWidth
+        self.separator = separator
+
+    def write(self, keys, rows, fout=None):
+        if not fout:
+            fout = sys.stdout
+        fieldSizes = map(len, keys)
+        formattedRows = []
+        for row in rows:
+            formattedRow = [unicode(field) if field is not None else '' for field in row]
+            formattedRows.append(formattedRow)
+            for i, field in enumerate(formattedRow):
+                fieldSizes[i] = max(fieldSizes[i], len(field))
+
+        separatorSize = len(self.separator)
+        longestRow = sum(fieldSizes) + (len(keys) - 1) * separatorSize
+        if longestRow <= self.maxWidth:
+            fout.write(self.separator.join(k.ljust(fieldSizes[i]) for i, k in enumerate(keys)))
+            fout.write('\n')
+            fout.write('-' * longestRow)
+            fout.write('\n')
+            for row in formattedRows:
+                fout.write(self.separator.join(field.rjust(fieldSizes[i]) for i, field in enumerate(row)))
+                fout.write('\n')
+        else:
+            keySize = max(map(len, keys))
+            formattedKeys = [k.ljust(keySize) for k in keys]
+            for row in formattedRows:
+                for i, field in enumerate(row):
+                    fout.write('{0}: {1}\n'.format(formattedKeys[i], field))
+                fout.write('\n')
