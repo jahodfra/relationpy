@@ -155,7 +155,7 @@ class Relation(object):
             yield current
             prevValue = currentValue
 
-    def groupBy(self, keyFunc, isSorted=False):
+    def _groupBy(self, keyFunc, isSorted=False):
         ''' sorts and groups items return iterables
         '''
         if isSorted:
@@ -163,7 +163,11 @@ class Relation(object):
         else:
             it = list(self._iter)
             it.sort(key=keyFunc)
-        return self.__class__((k, list(g)) for k, g in itertools.groupby(it, keyFunc))
+        return itertools.groupby(it, keyFunc)
+
+    def groupBy(self, keyFunc, isSorted=False):
+        buildDict = lambda (key, group): {'key': key, 'group': group}
+        return self.__class__(itertools.imap(buildDict, self._groupBy(keyFunc, isSorted)))
 
     def groupByNames(self, *names, **kwargs):
         ''' sorts and groups items
@@ -177,18 +181,28 @@ class Relation(object):
         Check that sorted relation, can be returned without any problem (ascending)
         >>> Relation([{'a': 1}, {'a': 1}, {'a': 2}]).groupByNames('a',
         ...     isSorted=True).list()
-        [(1, [{'a': 1}, {'a': 1}]), (2, [{'a': 2}])]
+        [{'a': 1, 'group': [{'a': 1}, {'a': 1}]}, {'a': 2, 'group': [{'a': 2}]}]
 
         Check that sorted relation, can be returned without any problem (descending)
         >>> Relation([{'a': 2}, {'a': 1}, {'a': 1}]).groupByNames('a',
         ...     isSorted=True).list()
-        [(2, [{'a': 2}]), (1, [{'a': 1}, {'a': 1}])]
+        [{'a': 2, 'group': [{'a': 2}]}, {'a': 1, 'group': [{'a': 1}, {'a': 1}]}]
 
         Check the grouping with sorting
         >>> Relation([{'a': 2}, {'a': 1}, {'a': 2}]).groupByNames('a').list()
-        [(1, [{'a': 1}]), (2, [{'a': 2}, {'a': 2}])]
+        [{'a': 1, 'group': [{'a': 1}]}, {'a': 2, 'group': [{'a': 2}, {'a': 2}]}]
         '''
-        return self.groupBy(keyFunc=operator.itemgetter(*names), isSorted=kwargs.get('isSorted', False))
+        keyFunc = operator.itemgetter(*names)
+        isSorted = kwargs.get('isSorted', False)
+        def buildDict((key, group)):
+            d = {'group': list(group)}
+            if len(names) == 1:
+                d[names[0]] = key
+            else:
+                for k, v in zip(names, key):
+                    d[k] = v
+            return d
+        return self.__class__(itertools.imap(buildDict, self._groupBy(keyFunc, isSorted)))
 
     def mapping(self, keyFunc):
         ''' returns mapping of key to value
