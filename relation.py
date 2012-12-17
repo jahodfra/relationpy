@@ -1,6 +1,7 @@
 import itertools
 import collections
 import operator
+import inspect
 
 class Relation(object):
     def __init__(self, seq):
@@ -24,15 +25,31 @@ class Relation(object):
         '''
         return itertools.imap(operator.itemgetter(*names), self._iter)
 
-    def compute(self, paramDict):
-        ''' computes additional parameters to the object, according paramDict
+    def extend(self, **newParams):
+        ''' computes additional parameters to the object
 
-        >>> x = Relation([{'a': 1}]).compute({'c': lambda o: o['a'] + 1})
+        >>> x = Relation([{'a': 1, 'b': 2}]).extend(
+        ...     c=lambda a: a + 1,
+        ...     d=lambda a, b: a + b,
+        ...     e=lambda: 25)
         >>> list(x)
-        [{'a': 1, 'c': 2}]
+        [{'a': 1, 'c': 2, 'b': 2, 'e': 25, 'd': 3}]
         '''
+        def createComputeParam(func):
+            args = inspect.getargspec(func).args
+            if len(args) == 0:
+                return lambda o: func()
+            elif len(args) == 1:
+                arg = args[0]
+                return lambda o: func(o.get(arg))
+            else:
+                getArgs = operator.itemgetter(*args)
+                return lambda o: func(*getArgs(o))
+
+        computeParam = dict((name, createComputeParam(func)) for name, func in newParams.items())
         def setter(o):
-            o.update(dict((name, func(o)) for name, func in paramDict.items()))
+            newValues = dict((name, func(o)) for name, func in computeParam.items())
+            o.update(newValues)
             return o
         return self.map(setter)
 
