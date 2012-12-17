@@ -81,11 +81,12 @@ class Relation(object):
     def rename(self, **kwargs):
         ''' rename some attributes according kwargs mapping
 
-        >>> x = Relation([{'a': 1, 'b': 2}]).rename(a='c')
+        >>> x = Relation([{'a': 1, 'b': 2}]).rename(c='a')
         >>> list(x)
         [{'c': 1, 'b': 2}]
         '''
-        func = lambda o: dict((kwargs.get(k, k), o[k]) for k in o)
+        revertedDict = dict((v, k) for k, v in kwargs.items())
+        func = lambda o: dict((revertedDict.get(k, k), o[k]) for k in o)
         return self.map(func)
 
     def fix(self):
